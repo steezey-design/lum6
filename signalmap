@@ -1,0 +1,29 @@
+index.html
+import { initTraderMade, bindSeriesToSymbol, seedHistoricalCandles, disconnectTraderMade }
+  from './tradermade-ws.js';
+
+// 1. After you create each chart and candlestick series:
+const series = chart.addSeries(CandlestickSeries, { ... });
+bindSeriesToSymbol(pair, series);
+
+// 2. Optionally seed history so the chart isn't empty:
+const history = await fetchHistoricalCandlesFromREST(pair); // your existing biquote call
+seedHistoricalCandles(pair, history);
+series.setData(history);
+
+// 3. Start the WebSocket once for all symbols:
+initTraderMade({
+  apiKey: 'YOUR_TRADERMADE_KEY',
+  symbols: PAIRS,
+  candleUpdateCb: (symbol, candle) => {
+    // Push directly into the series bound to this symbol
+    const state = aggregationState.get(symbol); // or track series in your own map
+    if (state?.series) {
+      state.series.update(candle); // handles forming + new candles
+    }
+  },
+  tickAnalysisCb: (symbol, dayChangePercent, mid) => {
+    // Feed the analysis layer — your analyzeRSI/Trend/Composite functions unchanged
+    updateAnalysisForSymbol(symbol, dayChangePercent, mid);
+  },
+});
